@@ -8,3 +8,4 @@ class LinkCreate(BaseModel):
 
 class LinkOut(BaseModel):
     slug: str
+    short_url: str

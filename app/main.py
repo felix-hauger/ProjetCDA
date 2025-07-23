@@ -20,5 +20,19 @@ SQLModel.metadata.create_all(bind=engine)
 def shorten_link(payload: LinkCreate, session: Session = Depends(get_session)):
     link = create_link(session, str(payload.url), payload.expires_at)
     return {
-        "slug": link.slug
+        "slug": link.slug,
+        "short_url": f"{app.url_path_for('redirect', slug=link.slug)}"
     }
+
+@app.get("/{slug}", name="redirect")
+def redirect(slug: str, session: Session = Depends(get_session)):
+    link: Link | None = session.exec(select(Link).where(Link.slug == slug)).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien introuvable")
+    if link.expires_at and link.expires_at < datetime.datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Lien expiré")
+    link.clicks += 1
+    link.last_accessed = datetime.datetime.utcnow()
+    session.add(link)
+    session.commit()
+    return RedirectResponse(link.original_url, status_code=301)
