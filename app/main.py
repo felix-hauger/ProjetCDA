@@ -24,6 +24,19 @@ def shorten_link(payload: LinkCreate, session: Session = Depends(get_session)):
         "short_url": f"{app.url_path_for('redirect', slug=link.slug)}"
     }
 
+@app.get("/links/{slug}")
+def get_stats(slug: str, session: Session = Depends(get_session)):
+    link: Link | None = session.exec(select(Link).where(Link.slug == slug)).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien introuvable")
+
+    return {
+        "clicks": link.clicks,
+        "created_at": link.created_at,
+        "last_accessed": link.last_accessed,
+        "expires_at": link.expires_at,
+    }
+
 @app.get("/{slug}", name="redirect")
 def redirect(slug: str, session: Session = Depends(get_session)):
     link: Link | None = session.exec(select(Link).where(Link.slug == slug)).first()
